@@ -7,8 +7,8 @@
  */
 
 #include "cholmod_extra.h"
-#include <suitesparse/cholmod.h>
-#include <suitesparse/cholmod_internal.h>
+#include <cholmod.h>
+#include <cholmod_internal.h>
 #include <math.h>
 
 #include <stdio.h>
