@@ -1,8 +1,7 @@
 ## CMake file to locate SuiteSparse and its useful composite projects
 ## The first developpement of this file was made fro Windows users who
-## use the http://code.google.com/p/suitesparse-metis-for-windows/
-## downloaded here :
-## svn checkout http://suitesparse-metis-for-windows.googlecode.com/svn/trunk/ suitesparse-metis-for-windows
+## use: 
+##  https://github.com/jlblancoc/suitesparse-metis-for-windows
 ## Anyway, it chould be work also on linux (tested on fedora 17 when you installed suitesparse from yum)
 ##
 ##
@@ -57,7 +56,7 @@
 ##
 ## Created by jesnault (jerome.esnault@inria.fr) 2014-01-15
 ## Updated by jesnault (jerome.esnault@inria.fr) 2014-01-21
-
+## Licensed under 3-Claused BSD License. See https://github.com/jlblancoc/suitesparse-metis-for-windows/blob/master/LICENSE.md
 
 ## check if global root SuiteSparse folder is set or not and cache it in order to let user fill it
 if(NOT SuiteSparse_DIR)
@@ -245,7 +244,7 @@ macro(SuiteSparse_FIND_COMPONENTS )
 		list(APPEND SuiteSparse_FOUND_LIST SuiteSparse_${suitesparseCompUC}_FOUND)
 		
 		## special definition needed for metis
-		if(${suitesparseComp} MATCHES "metis")
+		if(NOT ${suitesparseComp} MATCHES "metis")
 			set(SuiteSparse_${suitesparseCompUC}_DEFINITIONS "-DNPARTITION")
 			add_definitions(${SuiteSparse_${suitesparseCompUC}_DEFINITIONS})
 			if(SuiteSparse_VERBOSE)
@@ -259,7 +258,9 @@ macro(SuiteSparse_FIND_COMPONENTS )
 	## set the final SuiteSparse_FOUND based on all previous components found (status)
 	foreach(componentToCheck ${SuiteSparse_FOUND_LIST})
 		set(SuiteSparse_FOUND ON)
+		if(SuiteSparse_VERBOSE)
 		MESSAGE(STATUS "final check: ${componentToCheck}")
+		endif()
 		if(NOT ${componentToCheck})
 			set(SuiteSparse_FOUND OFF)
 			break() ## one component not found is enought to failed

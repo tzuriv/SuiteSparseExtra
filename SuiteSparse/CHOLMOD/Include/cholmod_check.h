@@ -43,8 +43,7 @@
  * cholmod_read_triplet	    read a matrix in triplet form (any Matrix Market
  *			    "coordinate" format, or a generic triplet format).
  *
- * 
-	    read a matrix in sparse form (same file format as
+ * cholmod_read_sparse	    read a matrix in sparse form (same file format as
  *			    cholmod_read_triplet).
  *
  * cholmod_read_dense	    read a dense matrix (any Matrix Market "array"

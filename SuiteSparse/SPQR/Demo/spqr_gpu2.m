@@ -72,5 +72,5 @@ fprintf ('8: matlab norm(R''R-S''S) nonneg        %12.4e\n', err (8)) ;
 fprintf ('\n-------------------------------------------------------\n') ;
 
 if (err (2) > 1e-10 || err (5) > max (1e-12, 1e3 * err (4)))
-    error ('!')
+    warning ('!')
 end

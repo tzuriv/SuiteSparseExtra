@@ -20,12 +20,19 @@ IF(WIN32)
 	SET(CMAKE_INSTALL_PREFIX "${SUITESPARSE_INSTALL_PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
 ENDIF()
 
-## get POSTFIX for lib install dir
+# Fix GKlib path:
+IF(NOT WIN32)
+	SET(GKLIB_PATH "${${PROJECT_NAME}_SOURCE_DIR}/metis/GKlib" CACHE INTERNAL "Path to GKlib (for METIS)" FORCE)
+ENDIF()
+
 if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-  set(LIB_POSTFIX "64" CACHE STRING "suffix for 32/64 inst dir placement")
+  set(SUITESPARSE_LIB_POSTFIX "64")
 else()
-  set(LIB_POSTFIX "" CACHE STRING "suffix for 32/64 inst dir placement")
+  set(SUITESPARSE_LIB_POSTFIX "")
 endif()
+
+## get POSTFIX for lib install dir
+set(LIB_POSTFIX "${SUITESPARSE_LIB_POSTFIX}" CACHE STRING "suffix for 32/64 inst dir placement")
 mark_as_advanced(LIB_POSTFIX)
 
 # We want libraries to be named "libXXX" and "libXXXd" in all compilers:
@@ -41,8 +48,9 @@ IF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/metis/CMakeLists.txt")
 	SET(BUILD_METIS_DEFAULT OFF)
 ENDIF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/metis/CMakeLists.txt")
 
-SET(BUILD_METIS ${BUILD_METIS_DEFAULT} CACHE BOOL "Build METIS for partitioning?")
+SET(WITH_CUDA OFF CACHE BOOL "Build with CUDA support")
 
+SET(BUILD_METIS ${BUILD_METIS_DEFAULT} CACHE BOOL "Build METIS for partitioning?")
 SET(METIS_DIR ${${PROJECT_NAME}_SOURCE_DIR}/metis CACHE PATH "Source directory of METIS")
 
 if(BUILD_METIS)
@@ -121,15 +129,24 @@ macro(declare_suitesparse_library targetName srcsList headersList)
 	if(NOT dsl_TARGET_PUBLIC_LINK)
 		set(dsl_TARGET_PUBLIC_LINK "")
 	endif()
-	
-	ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
+	if(WITH_CUDA)
+		find_package(CUDA)
+	endif()
+	IF(${CUDA_FOUND})
+		INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
+		INCLUDE_DIRECTORIES(${SuiteSparse_GPUQREngine_INCLUDE})
+		INCLUDE_DIRECTORIES(${SuiteSparse_GPURuntime_INCLUDE})
+		CUDA_ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
+	ELSE(${CUDA_FOUND})
+		ADD_LIBRARY(${targetName} ${srcsList} ${headersList})
+	ENDIF(${CUDA_FOUND})
 	SET_TARGET_PROPERTIES(${targetName} PROPERTIES 
 		OUTPUT_NAME ${SP_LIB_PREFIX}${targetName}
 	)
 	
 	target_link_libraries(${targetName} 
-		LINK_PUBLIC	 ${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects (embedded into cmake build)
-		LINK_PRIVATE ${dsl_TARGET_PRIVATE_LINK}	## external required libs
+			 ${dsl_TARGET_PUBLIC_LINK} suitesparseconfig ## suitesparseconfig is used for every projects (embedded into cmake build)
+		 ${dsl_TARGET_PRIVATE_LINK}	## external required libs
 	)
 
 	install_suitesparse_project(${targetName} "${headersList}")
@@ -150,11 +167,18 @@ ENDMACRO(REMOVE_MATCHING_FILES_FROM_LIST)
 
 ## check if the SHARED variable has already been defined (by the metis project) and use it for our projects
 ## BUILD_SHARED_LIBS specific variable allow cmake to know what kind of lib (STATIC or SHARED) it have to build
-if(DEFINED SHARED)
+if(DEFINED SHARED) 
 	set(BUILD_SHARED_LIBS ${SHARED})
 else()
 	set(SHARED FALSE CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
 	set(BUILD_SHARED_LIBS OFF)
+endif()
+
+if(WITH_CUDA)
+	FIND_PACKAGE(cuda)
+	IF(${CUDA_FOUND})
+		ADD_DEFINITIONS(-DGPU_BLAS)
+	ENDIF(${CUDA_FOUND})
 endif()
 
 ## Need to use SuiteSparse_LINKER_LAPACK_BLAS_LIBS in our subproject in case of SHARED flag is set to ON
@@ -216,7 +240,7 @@ install(FILES 		SuiteSparseConfigForInstall.cmake
 configure_file(UseSuiteSparseForInstall.cmake.in UseSuiteSparseForInstall.cmake @ONLY)
 install(FILES 		"${CMAKE_BINARY_DIR}/UseSuiteSparseForInstall.cmake"
 		DESTINATION	.
-		RENAME 		UseSuiteSparse${LIB_POSTFIX}.cmake
+		RENAME 		UseSuiteSparse${SUITESPARSE_LIB_POSTFIX}.cmake
 )
 
 ## do the EXPORT for allowing other project to easily use suitesparse with cmake
